@@ -1,0 +1,59 @@
+# Entornos virtuales
+venv/
+env/
+ENV/
+.venv/
+
+
+# Archivos de entorno
+.env
+*.env
+
+# Archivos de configuración de IDEs
+.vscode/
+.idea/
+*.code-workspace
+
+# __pycache__ y archivos compilados
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs
+*.log
+
+# Salidas de pytest / cobertura / profiling
+htmlcov/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.pytest_cache/
+
+# Archivos de ejecución
+*.pid
+*.seed
+
+# Data temporal
+data/*.json
+!data/repos_output.json
+!data/branches_comparison.json
+!data/commits_comparison.json
+!data/tags_comparison.json
+
+# Archivos de reporte HTML
+*.html
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Jupyter notebooks temporales
+.ipynb_checkpoints/
+
+# Carpeta dist / build (si exportas como paquete o app)
+dist/
+build/
+*.egg-info/

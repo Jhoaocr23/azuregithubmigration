@@ -1,0 +1,42 @@
+{
+    "matched": [
+        {
+            "azure": {
+                "repo_id": "8c370bd9-72ce-4479-9d04-b87c729c0792",
+                "repo_name": "demo-repo",
+                "org": "rockycs767",
+                "project": "testProject"
+            },
+            "github": {
+                "repo": "demo-repo",
+                "owner": "Jhoaocr23"
+            }
+        }
+    ],
+    "only_in_azure": [
+        {
+            "repo_id": "58828b4b-4b44-48b0-9dea-2aaae33957c6",
+            "repo_name": "testProject",
+            "org": "rockycs767",
+            "project": "testProject"
+        }
+    ],
+    "only_in_github": [
+        {
+            "repo": "FB-PLAYWRIGHT",
+            "owner": "Jhoaocr23"
+        },
+        {
+            "repo": "FACEBOOK-PLAYWRIGHT",
+            "owner": "Jhoaocr23"
+        },
+        {
+            "repo": "giancitogay",
+            "owner": "Jhoaocr23"
+        },
+        {
+            "repo": "appium-java",
+            "owner": "Jhoaocr23"
+        }
+    ]
+}

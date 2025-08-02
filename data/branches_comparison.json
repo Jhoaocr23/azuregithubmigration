@@ -1,0 +1,22 @@
+[
+    {
+        "repo": "demo-repo",
+        "azure_branches": [
+            "dev",
+            "main",
+            "qa"
+        ],
+        "github_branches": [
+            "dev",
+            "main",
+            "qa"
+        ],
+        "shared_branches": [
+            "dev",
+            "main",
+            "qa"
+        ],
+        "only_in_azure": [],
+        "only_in_github": []
+    }
+]

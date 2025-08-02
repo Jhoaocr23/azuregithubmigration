@@ -1,0 +1,10 @@
+[
+    {
+        "repo": "demo-repo",
+        "azure_tags": [],
+        "github_tags": [],
+        "shared_tags": [],
+        "only_in_azure": [],
+        "only_in_github": []
+    }
+]
