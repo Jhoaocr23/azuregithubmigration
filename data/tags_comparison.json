@@ -2,9 +2,13 @@
     {
         "repo": "demo-repo",
         "azure_tags": [],
-        "github_tags": [],
+        "github_tags": [
+            "v2.0.0"
+        ],
         "shared_tags": [],
         "only_in_azure": [],
-        "only_in_github": []
+        "only_in_github": [
+            "v2.0.0"
+        ]
     }
 ]
