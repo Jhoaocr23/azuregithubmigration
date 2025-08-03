@@ -1,5 +1,3 @@
-# tests/test_commits.py
-
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -18,7 +16,13 @@ def get_github_commits(owner, repo, branch):
         if response.status_code == 409:  # empty branch (e.g., no commits)
             return []
         response.raise_for_status()
-        data = response.json()
+        try:
+            data = response.json()
+        except Exception as e:
+            print(f"\n⚠️ Error al parsear JSON de GitHub para {url}")
+            print("Status code:", response.status_code)
+            print("Response text:", response.text[:500])
+            raise
         if not data:
             break
         commits.extend([c["sha"] for c in data])
@@ -36,36 +40,44 @@ def get_azure_commits(repo_id, branch):
             "$top": 100,
             "api-version": "7.0"
         }
-        headers = {"Authorization": f"Basic {AZURE_TOKEN}"}
+        # Usa el parámetro 'auth', NO headers, para autenticación básica
+        kwargs = {}
         if continuation_token:
-            headers["x-ms-continuationtoken"] = continuation_token
-        response = requests.get(url, headers=headers, params=params)
+            kwargs["headers"] = {"x-ms-continuationtoken": continuation_token}
+        response = requests.get(url, auth=("", AZURE_TOKEN), params=params, **kwargs)
         if response.status_code == 404:
             return []
         response.raise_for_status()
-        data = response.json()
+        try:
+            data = response.json()
+        except Exception as e:
+            print(f"\n⚠️ Error al parsear JSON de Azure para {url}")
+            print("Status code:", response.status_code)
+            print("Response text:", response.text[:500])
+            raise
         commits.extend([c["commitId"] for c in data["value"]])
         continuation_token = response.headers.get("x-ms-continuationtoken")
         if not continuation_token:
             break
     return commits
 
-def get_shared_branches(azure_repo_id, github_owner, github_repo):
-    azure_url = f"https://dev.azure.com/{AZURE_ORG}/{AZURE_PROJECT}/_apis/git/repositories/{azure_repo_id}/refs?filter=heads/&api-version=7.0"
-    azure_response = requests.get(azure_url, auth=("", AZURE_TOKEN))
-    azure_branches = {b["name"].replace("refs/heads/", "") for b in azure_response.json()["value"]}
 
-    github_url = f"https://api.github.com/repos/{github_owner}/{github_repo}/branches"
-    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-    github_response = requests.get(github_url, headers=headers)
-    github_branches = {b["name"] for b in github_response.json()}
-
-    return sorted(azure_branches & github_branches)
+def load_shared_branches():
+    """
+    Lee el archivo branches_comparison.json y devuelve un dict:
+    { repo_name: [branch1, branch2, ...] }
+    """
+    with open("data/branches_comparison.json") as f:
+        branches_data = json.load(f)
+    return {r["repo"]: r["shared_branches"] for r in branches_data}
 
 def test_commit_comparison(matched_repos):
     print("\n🔍 Comparando commits entre Azure y GitHub...")
 
     report = []
+
+    # Carga los branches comunes validados previamente
+    shared_branches_dict = load_shared_branches()
 
     for pair in matched_repos:
         azure_repo = pair["azure"]
@@ -74,7 +86,8 @@ def test_commit_comparison(matched_repos):
         repo_name = azure_repo["repo_name"]
 
         print(f"\n📦 Repositorio: {repo_name}")
-        shared_branches = get_shared_branches(azure_id, github_repo["owner"], github_repo["repo"])
+        shared_branches = shared_branches_dict.get(repo_name, [])
+
         if not shared_branches:
             print("⚠️  No hay branches comunes, se omite comparación de commits.")
             continue

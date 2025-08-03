@@ -1,6 +1,66 @@
 [
     {
         "repo": "demo-repo",
-        "branches": []
+        "branches": [
+            {
+                "branch": "dev",
+                "shared_commits": [
+                    "2b21587ab2bbfea8d2040aba3fcf7ab61ebb84e7",
+                    "3c53b24c09ffec299a259e155c03d0e5f54d55e9",
+                    "65721251bbb5dda6fc7a63b7aa6e2ceed8c5b21b",
+                    "70dd8b7e2c878e8722384eda1cb56dd0c369a81f",
+                    "76e2cc83e74ecc38d9ebb72bb43afa21310839df",
+                    "8716132a080d73a800ddf562b81a945b077114fe",
+                    "9335a21d4861cc5799336e29e282674269213a8a",
+                    "9484b2756f7b722663859dfc412c210d8aa12a3e",
+                    "9bf8a6d6d59e3077ecdd8e203b8054e73ecf435f",
+                    "bea424d28a1695c73c5e4bdfd560a5c5522bf030",
+                    "ca782c813b99ac458140e5563e1cb9b0d75ce1a6",
+                    "d0df490acb06e96b4895b97663821014404cd004",
+                    "eda3fbdf68cd13f6bd5046f6f29b08f9d8a306ca",
+                    "ef6881455ecb0a3f4ee7f905c4fda5fc9b26c9a1"
+                ],
+                "missing_in_github": [],
+                "extra_in_github": []
+            },
+            {
+                "branch": "main",
+                "shared_commits": [
+                    "3c53b24c09ffec299a259e155c03d0e5f54d55e9",
+                    "65721251bbb5dda6fc7a63b7aa6e2ceed8c5b21b",
+                    "8716132a080d73a800ddf562b81a945b077114fe",
+                    "9335a21d4861cc5799336e29e282674269213a8a",
+                    "d0df490acb06e96b4895b97663821014404cd004",
+                    "eda3fbdf68cd13f6bd5046f6f29b08f9d8a306ca",
+                    "ef6881455ecb0a3f4ee7f905c4fda5fc9b26c9a1"
+                ],
+                "missing_in_github": [],
+                "extra_in_github": [
+                    "2b21587ab2bbfea8d2040aba3fcf7ab61ebb84e7",
+                    "9484b2756f7b722663859dfc412c210d8aa12a3e"
+                ]
+            },
+            {
+                "branch": "qa",
+                "shared_commits": [
+                    "1fc2810065a85ec758c063356953ef26208fe581",
+                    "2b21587ab2bbfea8d2040aba3fcf7ab61ebb84e7",
+                    "3c53b24c09ffec299a259e155c03d0e5f54d55e9",
+                    "538beb5f7377d6b65133f1b38c1f79c883b57db5",
+                    "65721251bbb5dda6fc7a63b7aa6e2ceed8c5b21b",
+                    "8716132a080d73a800ddf562b81a945b077114fe",
+                    "8e197b2df6848ab5ede7baadc5e92a646685bf63",
+                    "9335a21d4861cc5799336e29e282674269213a8a",
+                    "9484b2756f7b722663859dfc412c210d8aa12a3e",
+                    "ae78f26697c8511bef757c392bbc8b6742758a81",
+                    "b011b5ec97690585f78033e59e78ef37617f8dfa",
+                    "d0df490acb06e96b4895b97663821014404cd004",
+                    "eda3fbdf68cd13f6bd5046f6f29b08f9d8a306ca",
+                    "ef6881455ecb0a3f4ee7f905c4fda5fc9b26c9a1"
+                ],
+                "missing_in_github": [],
+                "extra_in_github": []
+            }
+        ]
     }
 ]
