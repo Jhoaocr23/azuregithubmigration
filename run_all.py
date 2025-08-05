@@ -22,7 +22,7 @@ with open("data/tags_comparison.json") as f:
     tags_data = json.load(f)
 
 # Paso 3: Iniciar HTML
-fecha_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # <- Solo esto se agregó
+fecha_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  
 html = f"""
 <html>
 <head>
@@ -43,7 +43,7 @@ html = f"""
     <h1>📦 Reporte de Migración Azure DevOps → GitHub</h1>
     <p><strong>Responsable de la certificación:</strong> Jhoao Carranza</p>
     <p><strong>Fecha de ejecución:</strong> {fecha_hora}</p>
-    <h2>🔁 Repositorios Emparejados</h2>
+    <h2>🔁 Repositorios Emparejados <span style='font-weight:normal;'>(<b>{len(repos_data['matched'])}</b>)</span></h2>
     <table>
         <tr><th>Repositorio</th><th>Estado Branches</th><th>Estado Commits</th><th>Estado Tags</th></tr>
 """
