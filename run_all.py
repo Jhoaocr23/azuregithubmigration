@@ -3,6 +3,62 @@ import json
 import pytest
 from datetime import datetime 
 
+# === INICIO BLOQUE NUEVO: función para HTML de detalle individual ===
+def renderiza_detalle_repo_html(repo_name, branches, commits, tags):
+    detalle_html = f"""
+    <html>
+    <head>
+        <title>Detalle de Migración: {repo_name}</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; padding: 20px; }}
+            table {{ border-collapse: collapse; width: 100%; margin-bottom: 40px; }}
+            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+            th {{ background-color: #f2f2f2; }}
+            tr:nth-child(even) {{ background-color: #f9f9f9; }}
+            h2 {{ color: #333; }}
+        </style>
+    </head>
+    <body>
+        <h2>📄 Detalle de migración para: {repo_name}</h2>
+    """
+    if branches:
+        azure_br = ", ".join(branches["azure_branches"])
+        github_br = ", ".join(branches["github_branches"])
+        shared_br = ", ".join(branches["shared_branches"])
+        only_az = ", ".join(branches["only_in_azure"]) or "—"
+        only_gh = ", ".join(branches["only_in_github"]) or "—"
+        detalle_html += f"""
+        <table>
+            <tr><th>Branches en Azure</th><th>Branches en GitHub</th><th>Comunes</th><th>Solo Azure</th><th>Solo GitHub</th></tr>
+            <tr><td>{azure_br}</td><td>{github_br}</td><td>{shared_br}</td><td>{only_az}</td><td>{only_gh}</td></tr>
+        </table>
+        """
+    if commits:
+        detalle_html += """
+        <table>
+            <tr><th>Branch</th><th>Commits comunes</th><th>Faltan en GitHub</th><th>Extras en GitHub</th></tr>
+        """
+        for br in commits["branches"]:
+            detalle_html += f"<tr><td>{br['branch']}</td><td>{len(br['shared_commits'])}</td><td>{len(br['missing_in_github'])}</td><td>{len(br['extra_in_github'])}</td></tr>"
+        detalle_html += "</table>"
+    if tags:
+        shared = ", ".join(tags["shared_tags"]) or "—"
+        azure_only = ", ".join(tags["only_in_azure"]) or "—"
+        github_only = ", ".join(tags["only_in_github"]) or "—"
+        detalle_html += f"""
+        <table>
+            <tr><th>Tags Azure</th><th>Tags GitHub</th><th>Comunes</th><th>Faltantes</th></tr>
+            <tr>
+                <td>{", ".join(tags["azure_tags"]) or "—"}</td>
+                <td>{", ".join(tags["github_tags"]) or "—"}</td>
+                <td>{shared}</td>
+                <td>{azure_only if azure_only != "—" else github_only}</td>
+            </tr>
+        </table>
+        """
+    detalle_html += """<p><a href="../final_report.html">⬅ Volver al reporte principal</a></p></body></html>"""
+    return detalle_html
+# === FIN BLOQUE NUEVO ===
 
 # Paso 1: Ejecutar todos los tests
 print("🚀 Ejecutando pruebas...")
@@ -67,7 +123,9 @@ for repo in repos_data['matched']:
     if tags:
         tags_status = "<span class='ok'>✔ Tags iguales</span>" if not tags["only_in_azure"] and not tags["only_in_github"] else "<span class='fail'>❌ Faltan tags</span>"
 
-    html += f"<tr><td>{repo_name}</td><td>{branches_status}</td><td>{commits_status}</td><td>{tags_status}</td></tr>"
+    # === INICIO MODIFICACIÓN: el nombre ahora es un link al HTML detalle ===
+    html += f"<tr><td><a href='detalles/{repo_name}.html'>{repo_name}</a></td><td>{branches_status}</td><td>{commits_status}</td><td>{tags_status}</td></tr>"
+    # === FIN MODIFICACIÓN ===
 
 html += "</table>"
 
@@ -88,7 +146,9 @@ if repos_data['only_in_github']:
         html += f"<li>{r['repo']}</li>"
     html += "</ul>"
 
-# Paso 6: Detalle por repo
+
+"""
+# Paso 6: Detalle por repo (comentado para evitar duplicación de información)
 html += "<h2>📄 Detalles por Repositorio</h2>"
 for repo in repos_data["matched"]:
     name = repo["azure"]["repo_name"]
@@ -102,20 +162,20 @@ for repo in repos_data["matched"]:
         shared_br = ", ".join(b["shared_branches"])
         only_az = ", ".join(b["only_in_azure"]) or "—"
         only_gh = ", ".join(b["only_in_github"]) or "—"
-        html += f"""
+        html += f'''
         <table>
             <tr><th>Branches en Azure</th><th>Branches en GitHub</th><th>Comunes</th><th>Solo Azure</th><th>Solo GitHub</th></tr>
             <tr><td>{azure_br}</td><td>{github_br}</td><td>{shared_br}</td><td>{only_az}</td><td>{only_gh}</td></tr>
         </table>
-        """
+        '''
 
     # Commits
     c = next((x for x in commits_data if x["repo"] == name), None)
     if c:
-        html += """
+        html += '''
         <table>
             <tr><th>Branch</th><th>Commits comunes</th><th>Faltan en GitHub</th><th>Extras en GitHub</th></tr>
-        """
+        '''
         for br in c["branches"]:
             html += f"<tr><td>{br['branch']}</td><td>{len(br['shared_commits'])}</td><td>{len(br['missing_in_github'])}</td><td>{len(br['extra_in_github'])}</td></tr>"
         html += "</table>"
@@ -126,7 +186,7 @@ for repo in repos_data["matched"]:
         shared = ", ".join(t["shared_tags"]) or "—"
         azure_only = ", ".join(t["only_in_azure"]) or "—"
         github_only = ", ".join(t["only_in_github"]) or "—"
-        html += f"""
+        html += f'''
         <table>
             <tr><th>Tags Azure</th><th>Tags GitHub</th><th>Comunes</th><th>Faltantes</th></tr>
             <tr>
@@ -136,7 +196,9 @@ for repo in repos_data["matched"]:
                 <td>{azure_only if azure_only != "—" else github_only}</td>
             </tr>
         </table>
-        """
+        '''
+"""
+
 
 html += "</body></html>"
 
@@ -144,6 +206,18 @@ html += "</body></html>"
 os.makedirs("reports", exist_ok=True)
 with open("reports/final_report.html", "w") as f:
     f.write(html)
+
+# === INICIO BLOQUE NUEVO: generación de reportes individuales ===
+os.makedirs("reports/detalles", exist_ok=True)
+for repo in repos_data['matched']:
+    repo_name = repo['azure']['repo_name']
+    branches = next((b for b in branches_data if b['repo'] == repo_name), None)
+    commits = next((c for c in commits_data if c['repo'] == repo_name), None)
+    tags = next((t for t in tags_data if t['repo'] == repo_name), None)
+    detalle_html = renderiza_detalle_repo_html(repo_name, branches, commits, tags)
+    with open(f"reports/detalles/{repo_name}.html", "w") as f:
+        f.write(detalle_html)
+# === FIN BLOQUE NUEVO ===
 
 print("📄 Reporte HTML generado: reports/final_report.html")
 from colorama import init, Fore, Style
