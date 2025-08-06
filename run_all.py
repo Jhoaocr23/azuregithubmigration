@@ -92,6 +92,22 @@ html = f"""
     h2 {{ color: #333; }}
     .ok {{ color: green; font-weight: bold; }}
     .fail {{ color: red; font-weight: bold; }}
+    /* === INICIO CSS FLEX HEADER PARA BUSCADOR === */
+    .header-flex {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        gap: 16px;
+    }}
+    .buscador-repo {{
+        width: 320px;
+        padding: 8px;
+        font-size: 16px;
+        border: 2px solid #339cff;
+        border-radius: 6px;
+    }}
+    /* === FIN CSS FLEX HEADER === */
 </style>
 
 </head>
@@ -99,7 +115,12 @@ html = f"""
     <h1>📦 Reporte de Migración Azure DevOps → GitHub</h1>
     <p><strong>Responsable de la certificación:</strong> Jhoao Carranza</p>
     <p><strong>Fecha de ejecución:</strong> {fecha_hora}</p>
-    <h2>🔁 Repositorios Emparejados <span style='font-weight:normal;'>(<b>{len(repos_data['matched'])}</b>)</span></h2>
+    <!-- === INICIO BLOQUE FLEX HEADER BUSCADOR === -->
+    <div class="header-flex">
+        <h2 style="margin: 0;">🔁 Repositorios Emparejados <span style='font-weight:normal;'>(<b>{len(repos_data['matched'])}</b>)</span></h2>
+        <input type="text" id="buscadorRepo" onkeyup="filtrarRepos()" placeholder="🔎 Buscar repositorio..." class="buscador-repo">
+    </div>
+    <!-- === FIN BLOQUE FLEX HEADER BUSCADOR === -->
     <table>
         <tr><th>Repositorio</th><th>Estado Branches</th><th>Estado Commits</th><th>Estado Tags</th></tr>
 """
@@ -123,9 +144,7 @@ for repo in repos_data['matched']:
     if tags:
         tags_status = "<span class='ok'>✔ Tags iguales</span>" if not tags["only_in_azure"] and not tags["only_in_github"] else "<span class='fail'>❌ Faltan tags</span>"
 
-    # === INICIO MODIFICACIÓN: el nombre ahora es un link al HTML detalle ===
     html += f"<tr><td><a href='detalles/{repo_name}.html'>{repo_name}</a></td><td>{branches_status}</td><td>{commits_status}</td><td>{tags_status}</td></tr>"
-    # === FIN MODIFICACIÓN ===
 
 html += "</table>"
 
@@ -145,7 +164,6 @@ if repos_data['only_in_github']:
     for r in repos_data['only_in_github']:
         html += f"<li>{r['repo']}</li>"
     html += "</ul>"
-
 
 """
 # Paso 6: Detalle por repo (comentado para evitar duplicación de información)
@@ -199,6 +217,29 @@ for repo in repos_data["matched"]:
         '''
 """
 
+# === INICIO BLOQUE BUSCADOR (JavaScript) ===
+html += """
+<script>
+function filtrarRepos() {
+  let input = document.getElementById("buscadorRepo");
+  let filtro = input.value.toLowerCase();
+  let tabla = document.querySelector("table");
+  let filas = tabla.getElementsByTagName("tr");
+  for (let i = 1; i < filas.length; i++) {
+    let td = filas[i].getElementsByTagName("td")[0];
+    if (td) {
+      let txt = td.textContent || td.innerText;
+      if (txt.toLowerCase().indexOf(filtro) > -1) {
+        filas[i].style.display = "";
+      } else {
+        filas[i].style.display = "none";
+      }
+    }
+  }
+}
+</script>
+"""
+# === FIN BLOQUE BUSCADOR ===
 
 html += "</body></html>"
 
