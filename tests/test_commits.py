@@ -1,5 +1,6 @@
 import sys
 import os
+import time  # <--- NUEVO
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import requests
@@ -32,6 +33,7 @@ def get_github_commits(owner, repo, branch):
 def get_azure_commits(repo_id, branch):
     commits = []
     continuation_token = None
+    page = 1  # <--- NUEVO: contador de páginas
     while True:
         url = f"https://dev.azure.com/{AZURE_ORG}/{AZURE_PROJECT}/_apis/git/repositories/{repo_id}/commits"
         params = {
@@ -45,6 +47,7 @@ def get_azure_commits(repo_id, branch):
         if continuation_token:
             kwargs["headers"] = {"x-ms-continuationtoken": continuation_token}
         response = requests.get(url, auth=("", AZURE_TOKEN), params=params, **kwargs)
+        time.sleep(0.2)  # <--- NUEVO: Pausa para evitar rate limit
         if response.status_code == 404:
             return []
         response.raise_for_status()
@@ -56,9 +59,12 @@ def get_azure_commits(repo_id, branch):
             print("Response text:", response.text[:500])
             raise
         commits.extend([c["commitId"] for c in data["value"]])
+        # Print de avance para depuración
+        print(f"🔎 [AZURE] Página {page}: Traídos {len(data['value'])} commits (total: {len(commits)})")
         continuation_token = response.headers.get("x-ms-continuationtoken")
         if not continuation_token:
             break
+        page += 1  # <--- NUEVO: suma página
     return commits
 
 
