@@ -1,7 +1,8 @@
 import os
 import json
+import shutil
 import pytest
-from datetime import datetime 
+from datetime import datetime
 
 # === helpers para listas con viñetas ===
 def _ul(items):
@@ -15,7 +16,7 @@ def _ul_with_icon(items, icon=""):
     prefix = f"{icon} " if icon else ""
     return "<ul class='clean'>" + "".join(f"<li>{prefix}{x}</li>" for x in items) + "</ul>"
 
-# === INICIO: función para HTML de detalle individual (SOLO ESTA VISTA CAMBIADA) ===
+# === INICIO: función para HTML de detalle individual ===
 def renderiza_detalle_repo_html(repo_name, branches, commits, tags, workflows=None):
     detalle_html = f"""
     <html>
@@ -34,14 +35,14 @@ def renderiza_detalle_repo_html(repo_name, branches, commits, tags, workflows=No
               --accent:#2563eb;
             }}
             html,body{{ margin:0; padding:0; }}
-            body {{ font-family: Inter, Roboto, Segoe UI, Arial, sans-serif; color:var(--ink); background:#f6f7fb; padding:24px; line-height:1.35; position:relative; }}
+            body {{ font-family: Inter, Roboto, Segoe UI, Arial, sans-serif; color:var(--ink); background:#f6f7fb; padding:24px; line-height:1.35; }}
 
-            /* Encabezado del detalle CENTRADO con Octocat al costado */
-            .d-header{{ display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:14px; text-align:center; }}
+            /* Encabezado del detalle */
+            .d-header{{ display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:14px; }}
+            .d-left{{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }}
             .d-title{{ margin:0; font-size:26px; font-weight:900; letter-spacing:.2px; }}
             .d-octocat{{ height:66px; width:auto; filter: drop-shadow(0 1px 0 rgba(0,0,0,.05)); }}
-            /* Botón volver fijo a la izquierda para no romper el centrado */
-            .back-link{{ position:absolute; left:24px; top:24px; color:#1d4ed8; text-decoration:none; font-weight:600; }}
+            .back-link{{ color:#1d4ed8; text-decoration:none; font-weight:600; }}
             .back-link:hover{{ text-decoration:underline; }}
 
             table{{ width:100%; border-collapse:separate; border-spacing:0; background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.04); margin-bottom:28px; }}
@@ -68,10 +69,12 @@ def renderiza_detalle_repo_html(repo_name, branches, commits, tags, workflows=No
         </style>
     </head>
     <body>
-        <a class="back-link" href="../final_report.html">⬅ Volver al reporte principal</a>
         <div class="d-header">
+          <div class="d-left">
+            <a class="back-link" href="../final_report.html">⬅ Volver al reporte principal</a>
             <h1 class="d-title">📄 Detalle de migración: {repo_name}</h1>
-            <img src="../../assets/octocat.png" alt="GitHub Octocat" class="d-octocat">
+          </div>
+          <img src="../assets/octocat.png" alt="GitHub Octocat" class="d-octocat">
         </div>
     """
     # -------- Branches --------
@@ -153,6 +156,16 @@ def renderiza_detalle_repo_html(repo_name, branches, commits, tags, workflows=No
     return detalle_html
 # === FIN detalle ===
 
+# Paso 0: Copiar assets a reports/assets (para que las imágenes siempre se vean)
+src_assets = os.path.join("assets")
+dst_assets = os.path.join("reports", "assets")
+if os.path.isdir(src_assets):
+    os.makedirs("reports", exist_ok=True)
+    # reemplazar si ya existe
+    if os.path.isdir(dst_assets):
+        shutil.rmtree(dst_assets)
+    shutil.copytree(src_assets, dst_assets)
+
 # Paso 1: Ejecutar todos los tests
 print("🚀 Ejecutando pruebas...")
 pytest.main(["tests/test_repository.py", "-s"])
@@ -173,8 +186,8 @@ with open("data/tags_comparison.json") as f:
 with open("data/workflows_check.json", "r") as f:
     workflows_data = json.load(f)
 
-# Paso 3: Iniciar HTML principal (SIN CAMBIOS EN ESTA VISTA)
-fecha_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  
+# Paso 3: Iniciar HTML principal
+fecha_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 html = f"""
 <html>
 <head>
@@ -302,11 +315,11 @@ html = f"""
 </head>
 <body>
 
-    <!-- HERO HEADER centrado (principal SIN CAMBIOS) -->
+    <!-- HERO HEADER centrado -->
     <div class="hero">
       <h1 class="hero-title">
         📦 Reporte de Migración Azure DevOps → GitHub
-        <img src="../assets/octocat.png" alt="GitHub Octocat" class="octocat-inline">
+        <img src="assets/octocat.png" alt="GitHub Octocat" class="octocat-inline">
       </h1>
       <p class="hero-sub"><b>Responsable de la certificación:</b> Jhoao Carranza</p>
       <p class="hero-sub"><b>Fecha de ejecución:</b> {fecha_hora}</p>
