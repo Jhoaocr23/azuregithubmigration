@@ -37,13 +37,13 @@ def renderiza_detalle_repo_html(repo_name, branches, commits, tags, workflows=No
             html,body{{ margin:0; padding:0; }}
             body {{ font-family: Inter, Roboto, Segoe UI, Arial, sans-serif; color:var(--ink); background:#f6f7fb; padding:24px; line-height:1.35; }}
 
-            /* Encabezado del detalle */
-            .d-header{{ display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:14px; }}
-            .d-left{{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }}
+            /* Encabezado del detalle (centrado) */
+            .d-header{{ display:flex; flex-direction:column; align-items:center; gap:8px; margin-bottom:14px; }}
+            .back-link{{ align-self:flex-start; color:#1d4ed8; text-decoration:none; font-weight:600; }}
+            .back-link:hover{{ text-decoration:underline; }}
+            .d-center{{ display:flex; align-items:center; justify-content:center; gap:12px; text-align:center; width:100%; }}
             .d-title{{ margin:0; font-size:26px; font-weight:900; letter-spacing:.2px; }}
             .d-octocat{{ height:66px; width:auto; filter: drop-shadow(0 1px 0 rgba(0,0,0,.05)); }}
-            .back-link{{ color:#1d4ed8; text-decoration:none; font-weight:600; }}
-            .back-link:hover{{ text-decoration:underline; }}
 
             table{{ width:100%; border-collapse:separate; border-spacing:0; background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.04); margin-bottom:28px; }}
             th, td {{ padding:12px 14px; text-align:left; vertical-align: top; }}
@@ -70,11 +70,11 @@ def renderiza_detalle_repo_html(repo_name, branches, commits, tags, workflows=No
     </head>
     <body>
         <div class="d-header">
-          <div class="d-left">
-            <a class="back-link" href="../final_report.html">⬅ Volver al reporte principal</a>
+          <a class="back-link" href="../final_report.html">⬅ Volver al reporte principal</a>
+          <div class="d-center">
             <h1 class="d-title">📄 Detalle de migración: {repo_name}</h1>
+            <img src="../assets/octocat.png" alt="GitHub Octocat" class="d-octocat">
           </div>
-          <img src="../assets/octocat.png" alt="GitHub Octocat" class="d-octocat">
         </div>
     """
     # -------- Branches --------
@@ -288,7 +288,7 @@ html = f"""
     border: 1px solid var(--border);
     border-radius: 12px;
     box-shadow: 0 1px 2px rgba(0,0,0,.04);
-    overflow: hidden;
+    overflow: hidden.
   }}
   .panel-header{{
     background: #eef2ff;
@@ -334,7 +334,6 @@ html = f"""
     <table>
         <tr><th>Repositorio</th><th>Estado Branches</th><th>Estado Commits</th><th>Estado Tags</th><th>Workflows</th></tr>
 """
-
 # Paso 4: Repos emparejados
 for repo in repos_data['matched']:
     repo_name = repo['azure']['repo_name']
