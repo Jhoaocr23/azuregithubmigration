@@ -23,7 +23,15 @@
     ],
     "only_in_github": [
         {
+            "repo": "giancito",
+            "owner": "Jhoaocr23"
+        },
+        {
             "repo": "azuregithubmigration",
+            "owner": "Jhoaocr23"
+        },
+        {
+            "repo": "appium-java",
             "owner": "Jhoaocr23"
         },
         {
@@ -32,14 +40,6 @@
         },
         {
             "repo": "FACEBOOK-PLAYWRIGHT",
-            "owner": "Jhoaocr23"
-        },
-        {
-            "repo": "appium-java",
-            "owner": "Jhoaocr23"
-        },
-        {
-            "repo": "giancito",
             "owner": "Jhoaocr23"
         }
     ]

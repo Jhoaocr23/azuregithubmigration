@@ -13,6 +13,8 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      TZ: America/Lima   
 
     steps:
       - name: Checkout code
