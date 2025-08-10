@@ -72,7 +72,7 @@ def renderiza_detalle_repo_html(repo_name, branches, commits, tags, workflows=No
         <div class="d-header">
           <a class="back-link" href="../final_report.html">⬅ Volver al reporte principal</a>
           <div class="d-center">
-            <h1 class="d-title">📄 Detalle de migración: {repo_name}</h1>
+            <h1 class="d-title"> Detalle de migración: {repo_name}</h1>
             <img src="../assets/octocat.png" alt="GitHub Octocat" class="d-octocat">
           </div>
         </div>
@@ -318,7 +318,7 @@ html = f"""
     <!-- HERO HEADER centrado -->
     <div class="hero">
       <h1 class="hero-title">
-        📦 Reporte de Migración Azure DevOps → GitHub
+         Reporte de Migración Azure DevOps → GitHub
         <img src="assets/octocat.png" alt="GitHub Octocat" class="octocat-inline">
       </h1>
       <p class="hero-sub"><b>Responsable de la certificación:</b> Jhoao Carranza</p>
@@ -327,7 +327,7 @@ html = f"""
 
     <!-- Encabezado de tabla + buscador -->
     <div class="header-flex">
-        <h2 style="margin: 0;">🔁 Repositorios Emparejados <span style='font-weight:normal;'>(<b>{len(repos_data['matched'])}</b>)</span></h2>
+        <h2 style="margin: 0;"> Repositorios Emparejados <span style='font-weight:normal;'>(<b>{len(repos_data['matched'])}</b>)</span></h2>
         <input type="text" id="buscadorRepo" onkeyup="filtrarRepos()" placeholder="🔎 Buscar repositorio..." class="buscador-repo">
     </div>
 
@@ -372,7 +372,7 @@ total_az = len(repos_data['only_in_azure'])
 total_gh = len(repos_data['only_in_github'])
 
 html += f"""
-<h2 class="section-title">❌ Repos no emparejados</h2>
+<h2 class="section-title"> Repos no emparejados</h2>
 <div class="stat-chips">
   <span class="chip">📁 Total en Azure: <strong>{total_az}</strong></span>
   <span class="chip">🐙 Total en GitHub: <strong>{total_gh}</strong></span>
