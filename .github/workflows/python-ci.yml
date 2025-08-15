@@ -2,6 +2,11 @@ name: Python CI
 
 on:
   workflow_dispatch:
+    inputs:
+      max_workers:
+        description: 'Número de hilos para paralelizar ranuras'
+        required: false
+        default: '12'
   push:
     branches:
       - main
