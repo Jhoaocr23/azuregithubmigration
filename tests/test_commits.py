@@ -1,6 +1,6 @@
 import sys
 import os
-import time  # <--- NUEVO
+import time  
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import requests
@@ -8,16 +8,16 @@ import json
 from config import GITHUB_TOKEN, AZURE_TOKEN, AZURE_ORG, AZURE_PROJECT
 
 # ---------------------------
-# 👇 NUEVO: imports y config
+# Imports y config
 # ---------------------------
-from concurrent.futures import ThreadPoolExecutor, as_completed  # <--- NUEVO
-MAX_WORKERS = int(os.getenv("MAX_WORKERS", "12"))  # <--- NUEVO (ajusta 8–24 según tu token)
+from concurrent.futures import ThreadPoolExecutor, as_completed  
+MAX_WORKERS = int(os.getenv("MAX_WORKERS", "12"))  # <--Ajusta 8–24 según tu token)
 
 
 def get_github_commits(owner, repo, branch, session=None):  # <--- MOD: acepta session opcional
     commits = []
     page = 1
-    s = session or requests.Session()  # <--- NUEVO: reusa conexión si te paso una sesión
+    s = session or requests.Session()  # <--- Reusa conexión si te paso una sesión
     while True:
         url = f"https://api.github.com/repos/{owner}/{repo}/commits?sha={branch}&per_page=100&page={page}"
         headers = {"Authorization": f"token {GITHUB_TOKEN}"}
@@ -111,7 +111,7 @@ def load_shared_branches():
 
 
 # ---------------------------------------------------
-# 👇 NUEVO: worker para comparar UNA rama en paralelo
+# Worker para comparar UNA rama en paralelo
 # ---------------------------------------------------
 def _compare_one_branch(azure_repo_id, gh_owner, gh_repo, branch):
     try:
@@ -175,7 +175,7 @@ def test_commit_comparison(matched_repos):
         }
 
         # --------------------------------------------------------
-        # 👇 NUEVO: paralelismo por rama (reemplaza tu for actual)
+        # Paralelismo por rama (reemplaza tu for actual)
         # --------------------------------------------------------
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
             futures = [
