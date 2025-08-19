@@ -19,7 +19,8 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     env:
-      TZ: America/Lima   
+      TZ: America/Lima
+      MAX_WORKERS: ${{ github.event.inputs.max_workers || '12' }} # Valor por defecto si no se especifica
 
     steps:
       - name: Checkout code
@@ -53,4 +54,3 @@ jobs:
         with:
           name: reporte-migracion
           path: reports/**
-

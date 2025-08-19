@@ -10,6 +10,10 @@ import json
 from urllib.parse import urlparse, parse_qs
 from config import GITHUB_TOKEN, AZURE_TOKEN, AZURE_ORG, AZURE_PROJECT
 
+# Imports y control de hilos ======
+from concurrent.futures import ThreadPoolExecutor, as_completed  
+MAX_WORKERS = int(os.getenv("MAX_WORKERS", "12"))  
+
 
 def _parse_next_link(link_header: str):
     """
@@ -166,46 +170,65 @@ def get_azure_branches(repo_id):
     return sorted(branches)
 
 
-def test_branch_comparison(matched_repos):
-    print("\n🔍 Comparando branches entre Azure y GitHub...")
-    
-    report = []
+# ====== NUEVO: worker que procesa 1 repo emparejado ======
+def _process_pair(pair):
+    azure_repo = pair["azure"]
+    github_repo = pair["github"]
 
-    for pair in matched_repos:
-        azure_repo = pair["azure"]
-        github_repo = pair["github"]
+    azure_name = azure_repo["repo_name"]
+    github_name = github_repo["repo"]
 
-        azure_name = azure_repo["repo_name"]
-        github_name = github_repo["repo"]
+    try:
+        azure_branches = set(get_azure_branches(azure_repo["repo_id"]))
+        github_branches = set(get_github_branches(github_repo["owner"], github_name))
 
-        try:
-            azure_branches = set(get_azure_branches(azure_repo["repo_id"]))
-            github_branches = set(get_github_branches(github_repo["owner"], github_name))
+        shared = sorted(azure_branches & github_branches)
+        only_in_azure = sorted(azure_branches - github_branches)
+        only_in_github = sorted(github_branches - azure_branches)
 
-            shared = sorted(azure_branches & github_branches)
-            only_in_azure = sorted(azure_branches - github_branches)
-            only_in_github = sorted(github_branches - azure_branches)
+        log_lines = [
+            f"\n📦 Repositorio emparejado: {azure_name} ↔ {github_name}",
+            f"🔁 Branches en Azure DevOps: {sorted(azure_branches)}",
+            f"🔁 Branches en GitHub:       {sorted(github_branches)}",
+            f"✅ Branches comunes:         {shared}"
+        ]
+        if only_in_azure:
+            log_lines.append(f"❌ Branches solo en Azure:   {only_in_azure}")
+        if only_in_github:
+            log_lines.append(f"❌ Branches solo en GitHub:  {only_in_github}")
 
-            print(f"\n📦 Repositorio emparejado: {azure_name} ↔ {github_name}")
-            print(f"🔁 Branches en Azure DevOps: {sorted(azure_branches)}")
-            print(f"🔁 Branches en GitHub:       {sorted(github_branches)}")
-            print(f"✅ Branches comunes:         {shared}")
-            if only_in_azure:
-                print(f"❌ Branches solo en Azure:   {only_in_azure}")
-            if only_in_github:
-                print(f"❌ Branches solo en GitHub:  {only_in_github}")
-
-            report.append({
+        return {
+            "log": "\n".join(log_lines),
+            "entry": {
                 "repo": azure_name,
                 "azure_branches": sorted(list(azure_branches)),
                 "github_branches": sorted(list(github_branches)),
                 "shared_branches": shared,
                 "only_in_azure": only_in_azure,
                 "only_in_github": only_in_github
-            })
+            }
+        }
 
-        except Exception as e:
-            print(f"⚠️ Error al comparar branches para {azure_name}: {str(e)}")
+    except Exception as e:
+        return {
+            "log": f"⚠️ Error al comparar branches para {azure_name}: {str(e)}",
+            "entry": None
+        }
+
+
+def test_branch_comparison(matched_repos):
+    print("\n🔍 Comparando branches entre Azure y GitHub...")
+    
+    report = []
+
+    # ====== Paralelismo por repo emparejado ======
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
+        futures = [ex.submit(_process_pair, pair) for pair in matched_repos]
+        for fut in as_completed(futures):
+            res = fut.result()
+            print(res["log"])
+            if res["entry"] is not None:
+                report.append(res["entry"])
 
     # Guardar reporte en JSON
     os.makedirs("data", exist_ok=True)
