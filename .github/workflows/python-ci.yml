@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       max_workers:
-        description: 'Número de hilos para paralelizar ranuras'
+        description: 'Número de hilos para paralelizar'
         required: false
         default: '12'
   push:
