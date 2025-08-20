@@ -82,10 +82,21 @@ def renderiza_detalle_repo_html(repo_name, branches, commits, tags, workflows=No
         azure_br_ul = _ul(branches["azure_branches"])
         github_br_ul = _ul(branches["github_branches"])
         shared_br_ul = _ul(branches["shared_branches"])
-        only_az_ul = _ul(branches["only_in_azure"])
-        only_gh_ul = _ul(branches["only_in_github"])
-        branches_ok = (not branches["only_in_azure"] and not branches["only_in_github"])
-        branches_estado = "<span class='ok'>✔ Completos</span>" if branches_ok else "<span class='fail'>⚠ Incompletos</span>"
+        only_az = branches.get("only_in_azure", [])
+        only_gh = branches.get("only_in_github", [])
+        only_az_ul = _ul(only_az)
+        only_gh_ul = _ul(only_gh)
+
+        # Estado refinado
+        branches_ok = (len(only_az) == 0)
+        if branches_ok:
+            if len(only_gh) == 0:
+                branches_estado = "<span class='ok'>✔ Completo</span>"
+            else:
+                branches_estado = f"<span class='ok'>✔ Cumple (Extras en GitHub: {len(only_gh)})</span>"
+        else:
+            branches_estado = "<span class='fail'>⚠ Faltan ramas de Azure en GitHub</span>"
+
         detalle_html += f"""
         <table>
             <tr><th>Branches en Azure</th><th>Branches en GitHub</th><th>Comunes</th><th>Solo Azure</th><th>Solo GitHub</th><th>Estado</th></tr>
@@ -100,14 +111,25 @@ def renderiza_detalle_repo_html(repo_name, branches, commits, tags, workflows=No
             <tr><th>Branch</th><th>Commits comunes</th><th>Faltan en GitHub</th><th>Extras en GitHub</th><th>Estado</th></tr>
         """
         for br in commits["branches"]:
-            per_branch_ok = (len(br["missing_in_github"]) == 0 and len(br["extra_in_github"]) == 0)
-            per_branch_estado = "<span class='ok'>✔ Coinciden</span>" if per_branch_ok else "<span class='fail'>❌ Diferencias</span>"
+            # Verde si NO faltan commits de Azure en GitHub (extras en GitHub permitidas)
+            missing_cnt = len(br.get("missing_in_github", []))
+            extras_cnt = len(br.get("extra_in_github", []))
+            per_branch_ok = (missing_cnt == 0)
+            if per_branch_ok:
+                per_branch_estado = (
+                    "<span class='ok'>✔ Completo</span>"
+                    if extras_cnt == 0 else
+                    f"<span class='ok'>✔ Cumple (Extras en GitHub: {extras_cnt})</span>"
+                )
+            else:
+                per_branch_estado = "<span class='fail'>⚠ Faltan commits de Azure en GitHub</span>"
+
             detalle_html += (
                 f"<tr>"
-                f"<td>{br['branch']}</td>"
-                f"<td>{len(br['shared_commits'])}</td>"
-                f"<td>{len(br['missing_in_github'])}</td>"
-                f"<td>{len(br['extra_in_github'])}</td>"
+                f"<td>{br.get('branch','')}</td>"
+                f"<td>{len(br.get('shared_commits', []))}</td>"
+                f"<td>{missing_cnt}</td>"
+                f"<td>{extras_cnt}</td>"
                 f"<td>{per_branch_estado}</td>"
                 f"</tr>"
             )
@@ -288,7 +310,7 @@ html = f"""
     border: 1px solid var(--border);
     border-radius: 12px;
     box-shadow: 0 1px 2px rgba(0,0,0,.04);
-    overflow: hidden.
+    overflow: hidden;
   }}
   .panel-header{{
     background: #eef2ff;
@@ -334,6 +356,7 @@ html = f"""
     <table>
         <tr><th>Repositorio</th><th>Estado Branches</th><th>Estado Commits</th><th>Estado Tags</th><th>Workflows</th></tr>
 """
+
 # Paso 4: Repos emparejados
 for repo in repos_data['matched']:
     repo_name = repo['azure']['repo_name']
@@ -350,9 +373,31 @@ for repo in repos_data['matched']:
     workflows_status = "❌ Sin info"
 
     if branches:
-        branches_status = "<span class='ok'>✔ Completos</span>" if not branches["only_in_azure"] and not branches["only_in_github"] else "<span class='fail'>⚠ Incompletos</span>"
+        # Estado refinado: Azure ⊆ GitHub, extras permitidas con conteo
+        only_az = branches.get("only_in_azure", [])
+        only_gh = branches.get("only_in_github", [])
+        if len(only_az) == 0:
+            branches_status = (
+                "<span class='ok'>✔ Completo</span>"
+                if len(only_gh) == 0
+                else f"<span class='ok'>✔ Cumple (Extras en GitHub: {len(only_gh)})</span>"
+            )
+        else:
+            branches_status = "<span class='fail'>⚠ Faltan ramas de Azure en GitHub</span>"
+
     if commits:
-        commits_status = "<span class='ok'>✔ Coinciden</span>" if all(len(b["missing_in_github"]) == 0 and len(b["extra_in_github"]) == 0 for b in commits["branches"]) else "<span class='fail'>❌ Diferencias</span>"
+        # Si falta algún commit de Azure en GitHub → falla
+        missing_any = any(len(b.get("missing_in_github", [])) > 0 for b in commits["branches"])
+        if missing_any:
+            commits_status = "<span class='fail'>❌ Faltan commits de Azure en GitHub</span>"
+        else:
+            extras_total = sum(len(b.get("extra_in_github", [])) for b in commits["branches"])
+            commits_status = (
+                "<span class='ok'>✔ Completo</span>"
+                if extras_total == 0
+                else f"<span class='ok'>✔ Cumple (Extras en GitHub: {extras_total})</span>"
+            )
+
     if tags:
         tags_status = "<span class='ok'>✔ Tags iguales</span>" if not tags["only_in_azure"] and not tags["only_in_github"] else "<span class='fail'>❌ Faltan tags</span>"
     if wf:

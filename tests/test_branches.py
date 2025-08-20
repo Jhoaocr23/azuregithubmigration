@@ -14,6 +14,11 @@ from config import GITHUB_TOKEN, AZURE_TOKEN, AZURE_ORG, AZURE_PROJECT
 from concurrent.futures import ThreadPoolExecutor, as_completed  
 MAX_WORKERS = int(os.getenv("MAX_WORKERS", "12"))  
 
+def _normalize_branch_name_from_azure_to_github(name: str) -> str:
+    # Azure a veces tiene 'master'; en GitHub usamos 'main'
+    return "main" if name == "master" else name
+
+
 
 def _parse_next_link(link_header: str):
     """
@@ -170,7 +175,7 @@ def get_azure_branches(repo_id):
     return sorted(branches)
 
 
-# ====== NUEVO: worker que procesa 1 repo emparejado ======
+# ====== Wworker que procesa 1 repo emparejado ======
 def _process_pair(pair):
     azure_repo = pair["azure"]
     github_repo = pair["github"]
@@ -179,33 +184,43 @@ def _process_pair(pair):
     github_name = github_repo["repo"]
 
     try:
-        azure_branches = set(get_azure_branches(azure_repo["repo_id"]))
+        # 1) Traer ramas
+        azure_branches_raw = set(get_azure_branches(azure_repo["repo_id"]))
         github_branches = set(get_github_branches(github_repo["owner"], github_name))
 
-        shared = sorted(azure_branches & github_branches)
-        only_in_azure = sorted(azure_branches - github_branches)
-        only_in_github = sorted(github_branches - azure_branches)
+        # 2) Normalizar ramas de Azure para evaluar OK/FAIL (master ≡ main)
+        azure_branches_norm = {
+            _normalize_branch_name_from_azure_to_github(b) for b in azure_branches_raw
+        }
 
+        # 3) Ramas compartidas EXACTAS (sin alias) — útiles para comparar commits
+        shared = sorted(azure_branches_raw & github_branches)
+
+        # 4) Regla de aprobación: Azure ⊆ GitHub
+        only_in_azure = sorted(azure_branches_norm - github_branches)   # si hay, FALLA
+        only_in_github = sorted(github_branches - azure_branches_norm)  # extras permitidas
+
+        # 5) Log claro
         log_lines = [
             f"\n📦 Repositorio emparejado: {azure_name} ↔ {github_name}",
-            f"🔁 Branches en Azure DevOps: {sorted(azure_branches)}",
-            f"🔁 Branches en GitHub:       {sorted(github_branches)}",
-            f"✅ Branches comunes:         {shared}"
+            f"🔁 Branches (Azure normalizadas): {sorted(azure_branches_norm)}",
+            f"🔁 Branches en GitHub:            {sorted(github_branches)}",
+            f"✅ Branches comunes (idénticas):  {shared}",
         ]
         if only_in_azure:
-            log_lines.append(f"❌ Branches solo en Azure:   {only_in_azure}")
+            log_lines.append(f"❌ Faltan en GitHub (obligatorias): {only_in_azure}")
         if only_in_github:
-            log_lines.append(f"❌ Branches solo en GitHub:  {only_in_github}")
+            log_lines.append(f"ℹ️ Extras en GitHub (permitidas):  {only_in_github}")
 
         return {
             "log": "\n".join(log_lines),
             "entry": {
                 "repo": azure_name,
-                "azure_branches": sorted(list(azure_branches)),
+                "azure_branches": sorted(list(azure_branches_raw)),  # crudas para mostrar
                 "github_branches": sorted(list(github_branches)),
-                "shared_branches": shared,
-                "only_in_azure": only_in_azure,
-                "only_in_github": only_in_github
+                "shared_branches": shared,       # EXACTAS (para commits)
+                "only_in_azure": only_in_azure,  # FALTANTES (con alias aplicado)
+                "only_in_github": only_in_github # EXTRAS (permitidas)
             }
         }
 
@@ -214,6 +229,7 @@ def _process_pair(pair):
             "log": f"⚠️ Error al comparar branches para {azure_name}: {str(e)}",
             "entry": None
         }
+
 
 
 def test_branch_comparison(matched_repos):

@@ -1,6 +1,7 @@
+# tests/test_commits.py
 import sys
 import os
-import time  
+import time
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import requests
@@ -10,18 +11,57 @@ from config import GITHUB_TOKEN, AZURE_TOKEN, AZURE_ORG, AZURE_PROJECT
 # ---------------------------
 # Imports y config
 # ---------------------------
-from concurrent.futures import ThreadPoolExecutor, as_completed  
-MAX_WORKERS = int(os.getenv("MAX_WORKERS", "12"))  # <--Ajusta 8–24 según tu token)
+from concurrent.futures import ThreadPoolExecutor, as_completed
+MAX_WORKERS = int(os.getenv("MAX_WORKERS", "12"))  # <-- Ajusta 8–24 según tu token)
+
+# ---------------------------
+# Utilidades para alias master -> main
+# ---------------------------
+def _normalize_branch_name_from_azure_to_github(name: str) -> str:
+    """Azure puede tener 'master'; en GitHub usamos 'main'."""
+    return "main" if name == "master" else name
+
+def _pair_branches_for_commits(azure_branches, github_branches):
+    """
+    Devuelve una lista de tuplas (az_branch, gh_branch, label) usando
+    el alias master→main para emparejar commits.
+    """
+    gh_set = set(github_branches)
+    pairs = []
+    for az in azure_branches:
+        gh = _normalize_branch_name_from_azure_to_github(az)
+        if gh in gh_set:
+            label = f"{az} → {gh}" if az != gh else gh
+            pairs.append((az, gh, label))
+    return pairs
+
+def load_branch_pairs():
+    """
+    Lee data/branches_comparison.json y construye, por repo, los pares (az, gh, label)
+    considerando el alias master→main.
+    Estructura devuelta:
+      { repo_name: [(az_branch, gh_branch, label), ...], ... }
+    """
+    with open("data/branches_comparison.json") as f:
+        rows = json.load(f)
+
+    result = {}
+    for r in rows:
+        repo_name = r["repo"]
+        azure_branches = r.get("azure_branches", [])
+        github_branches = r.get("github_branches", [])
+        result[repo_name] = _pair_branches_for_commits(azure_branches, github_branches)
+    return result
 
 
-def get_github_commits(owner, repo, branch, session=None):  # <--- MOD: acepta session opcional
+def get_github_commits(owner, repo, branch, session=None):  # <--- acepta session opcional
     commits = []
     page = 1
     s = session or requests.Session()  # <--- Reusa conexión si te paso una sesión
     while True:
         url = f"https://api.github.com/repos/{owner}/{repo}/commits?sha={branch}&per_page=100&page={page}"
         headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-        response = s.get(url, headers=headers)  # <--- MOD: usa la sesión (o requests.Session temporal)
+        response = s.get(url, headers=headers)
         if response.status_code == 409:  # empty branch (e.g., no commits)
             return []
         response.raise_for_status()
@@ -54,7 +94,7 @@ def get_azure_commits(repo_id, branch):
     params = {
         "searchCriteria.itemVersion.versionType": "branch",
         "searchCriteria.itemVersion.version": branch,
-        "$top": 5000,                 # pides hasta 5000 por página
+        "$top": 5000,
         "api-version": "7.2-preview.2"
     }
     headers = {"Accept": "application/json"}
@@ -100,33 +140,23 @@ def get_azure_commits(repo_id, branch):
     return commits
 
 
-def load_shared_branches():
-    """
-    Lee el archivo branches_comparison.json y devuelve un dict:
-    { repo_name: [branch1, branch2, ...] }
-    """
-    with open("data/branches_comparison.json") as f:
-        branches_data = json.load(f)
-    return {r["repo"]: r["shared_branches"] for r in branches_data}
-
-
 # ---------------------------------------------------
-# Worker para comparar UNA rama en paralelo
+# Worker para comparar UNA rama en paralelo (con alias)
 # ---------------------------------------------------
-def _compare_one_branch(azure_repo_id, gh_owner, gh_repo, branch):
+def _compare_one_branch(azure_repo_id, gh_owner, gh_repo, az_branch, gh_branch, label):
     try:
         # Sesión propia por hilo para GitHub (reusa keep-alive dentro del hilo)
         gh_sess = requests.Session()
 
-        azure_commits = set(get_azure_commits(azure_repo_id, branch))
-        github_commits = set(get_github_commits(gh_owner, gh_repo, branch, session=gh_sess))
+        azure_commits = set(get_azure_commits(azure_repo_id, az_branch))
+        github_commits = set(get_github_commits(gh_owner, gh_repo, gh_branch, session=gh_sess))
 
         missing_in_github = sorted(azure_commits - github_commits)
         extra_in_github = sorted(github_commits - azure_commits)
         shared_commits = sorted(azure_commits & github_commits)
 
         log_lines = [
-            f"🔁 Branch: {branch}",
+            f"🔁 Branch: {label}",
             f"   ✔ Commits comunes: {len(shared_commits)}"
         ]
         if missing_in_github:
@@ -138,14 +168,14 @@ def _compare_one_branch(azure_repo_id, gh_owner, gh_repo, branch):
             "ok": True,
             "log": "\n".join(log_lines),
             "result": {
-                "branch": branch,
+                "branch": label,  # p.ej. "master → main" o "dev"
                 "shared_commits": shared_commits,
                 "missing_in_github": missing_in_github,
                 "extra_in_github": extra_in_github
             }
         }
     except Exception as e:
-        return {"ok": False, "log": f"⚠️ Error al comparar branch {branch}: {e}"}
+        return {"ok": False, "log": f"⚠️ Error al comparar branch {label}: {e}"}
 
 
 def test_commit_comparison(matched_repos):
@@ -153,8 +183,8 @@ def test_commit_comparison(matched_repos):
 
     report = []
 
-    # Carga los branches comunes validados previamente
-    shared_branches_dict = load_shared_branches()
+    # Cargar pares de ramas (con alias master→main) por repo
+    branch_pairs_dict = load_branch_pairs()
 
     for pair in matched_repos:
         azure_repo = pair["azure"]
@@ -163,10 +193,10 @@ def test_commit_comparison(matched_repos):
         repo_name = azure_repo["repo_name"]
 
         print(f"\n📦 Repositorio: {repo_name}")
-        shared_branches = shared_branches_dict.get(repo_name, [])
+        branch_pairs = branch_pairs_dict.get(repo_name, [])
 
-        if not shared_branches:
-            print("⚠️  No hay branches comunes, se omite comparación de commits.")
+        if not branch_pairs:
+            print("⚠️  No hay ramas emparejadas para commits (considerando alias). Se omite.")
             continue
 
         repo_result = {
@@ -175,7 +205,7 @@ def test_commit_comparison(matched_repos):
         }
 
         # --------------------------------------------------------
-        # Paralelismo por rama (reemplaza tu for actual)
+        # Paralelismo por rama (usa pares az/gh)
         # --------------------------------------------------------
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
             futures = [
@@ -184,9 +214,11 @@ def test_commit_comparison(matched_repos):
                     azure_id,
                     github_repo["owner"],
                     github_repo["repo"],
-                    branch
+                    az_branch,
+                    gh_branch,
+                    label
                 )
-                for branch in shared_branches
+                for (az_branch, gh_branch, label) in branch_pairs
             ]
 
             for fut in as_completed(futures):
