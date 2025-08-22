@@ -15,30 +15,50 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 MAX_WORKERS = int(os.getenv("MAX_WORKERS", "12"))  # <-- Ajusta 8–24 según tu token)
 
 # ---------------------------
-# Utilidades para alias master -> main
+# Utilidades para alias master <-> main
 # ---------------------------
 def _normalize_branch_name_from_azure_to_github(name: str) -> str:
-    """Azure puede tener 'master'; en GitHub usamos 'main'."""
+    """Azure puede tener 'master'; en GitHub usamos 'main' como alias directo."""
     return "main" if name == "master" else name
 
 def _pair_branches_for_commits(azure_branches, github_branches):
     """
-    Devuelve una lista de tuplas (az_branch, gh_branch, label) usando
-    el alias master→main para emparejar commits.
+    Devuelve una lista de tuplas (az_branch, gh_branch, label) emparejando
+    ramas para comparación de commits con estas reglas:
+      1) Coincidencia exacta (az == gh)
+      2) Alias Azure 'master' -> GitHub 'main'
+      3) Alias Azure 'main'   -> GitHub 'master'  (NUEVO)
     """
     gh_set = set(github_branches)
     pairs = []
     for az in azure_branches:
+        # 1) Coincidencia exacta primero
+        if az in gh_set:
+            pairs.append((az, az, az))
+            continue
+
+        # 2) Azure 'master' -> GitHub 'main' (ya lo cubría la normalización)
+        if az == "master" and "main" in gh_set:
+            pairs.append((az, "main", "master → main"))
+            continue
+
+        # 3) Azure 'main' -> GitHub 'master' (NUEVO)
+        if az == "main" and "master" in gh_set:
+            pairs.append((az, "master", "main → master"))
+            continue
+
+        # 4) Fallback usando normalización (por seguridad)
         gh = _normalize_branch_name_from_azure_to_github(az)
         if gh in gh_set:
             label = f"{az} → {gh}" if az != gh else gh
             pairs.append((az, gh, label))
+
     return pairs
 
 def load_branch_pairs():
     """
     Lee data/branches_comparison.json y construye, por repo, los pares (az, gh, label)
-    considerando el alias master→main.
+    considerando alias master<->main.
     Estructura devuelta:
       { repo_name: [(az_branch, gh_branch, label), ...], ... }
     """
@@ -168,7 +188,7 @@ def _compare_one_branch(azure_repo_id, gh_owner, gh_repo, az_branch, gh_branch, 
             "ok": True,
             "log": "\n".join(log_lines),
             "result": {
-                "branch": label,  # p.ej. "master → main" o "dev"
+                "branch": label,  # p.ej. "master → main" o "main → master" o "dev"
                 "shared_commits": shared_commits,
                 "missing_in_github": missing_in_github,
                 "extra_in_github": extra_in_github
@@ -183,7 +203,7 @@ def test_commit_comparison(matched_repos):
 
     report = []
 
-    # Cargar pares de ramas (con alias master→main) por repo
+    # Cargar pares de ramas (con alias master<->main) por repo
     branch_pairs_dict = load_branch_pairs()
 
     for pair in matched_repos:

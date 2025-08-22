@@ -188,29 +188,41 @@ def _process_pair(pair):
         azure_branches_raw = set(get_azure_branches(azure_repo["repo_id"]))
         github_branches = set(get_github_branches(github_repo["owner"], github_name))
 
-        # 2) Normalizar ramas de Azure para evaluar OK/FAIL (master ≡ main)
-        azure_branches_norm = {
-            _normalize_branch_name_from_azure_to_github(b) for b in azure_branches_raw
-        }
+        # === INICIO CAMBIO: alias bidireccional main <-> master ===
+        def _aliases(name: str):
+            if name == "master":
+                return {"master", "main"}
+            if name == "main":
+                return {"main", "master"}
+            return {name}
 
-        # 3) Ramas compartidas EXACTAS (sin alias) — útiles para comparar commits
+        # Faltantes en GitHub: ninguna de sus variantes aparece en GitHub
+        def _covered_in_github(az_b: str) -> bool:
+            return len(_aliases(az_b) & github_branches) > 0
+
+        only_in_azure = sorted([b for b in azure_branches_raw if not _covered_in_github(b)])
+
+        # Extras en GitHub: no están cubiertas por ninguna rama de Azure (considerando alias)
+        azure_cover = set()
+        for b in azure_branches_raw:
+            azure_cover |= _aliases(b)
+        only_in_github = sorted([g for g in github_branches if g not in azure_cover])
+
+        # Comunes exactas (idénticas por nombre) — informativo
         shared = sorted(azure_branches_raw & github_branches)
-
-        # 4) Regla de aprobación: Azure ⊆ GitHub
-        only_in_azure = sorted(azure_branches_norm - github_branches)   # si hay, FALLA
-        only_in_github = sorted(github_branches - azure_branches_norm)  # extras permitidas
+        # === FIN CAMBIO ===
 
         # 5) Log claro
         log_lines = [
             f"\n📦 Repositorio emparejado: {azure_name} ↔ {github_name}",
-            f"🔁 Branches (Azure normalizadas): {sorted(azure_branches_norm)}",
-            f"🔁 Branches en GitHub:            {sorted(github_branches)}",
-            f"✅ Branches comunes (idénticas):  {shared}",
+            f"🔁 Branches en Azure (alias main/master considerados): {sorted(azure_branches_raw)}",
+            f"🔁 Branches en GitHub:                                  {sorted(github_branches)}",
+            f"✅ Branches comunes (idénticas):                        {shared}",
         ]
         if only_in_azure:
             log_lines.append(f"❌ Faltan en GitHub (obligatorias): {only_in_azure}")
         if only_in_github:
-            log_lines.append(f"ℹ️ Extras en GitHub (permitidas):  {only_in_github}")
+            log_lines.append(f"ℹ️ Extras en GitHub (permitidas):   {only_in_github}")
 
         return {
             "log": "\n".join(log_lines),
@@ -218,9 +230,9 @@ def _process_pair(pair):
                 "repo": azure_name,
                 "azure_branches": sorted(list(azure_branches_raw)),  # crudas para mostrar
                 "github_branches": sorted(list(github_branches)),
-                "shared_branches": shared,       # EXACTAS (para commits)
-                "only_in_azure": only_in_azure,  # FALTANTES (con alias aplicado)
-                "only_in_github": only_in_github # EXTRAS (permitidas)
+                "shared_branches": shared,       # EXACTAS (para commits/visual)
+                "only_in_azure": only_in_azure,  # FALTANTES (con alias bidireccional)
+                "only_in_github": only_in_github # EXTRAS (permitidas, con alias bidireccional)
             }
         }
 
